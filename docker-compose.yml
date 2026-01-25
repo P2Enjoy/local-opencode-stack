@@ -26,7 +26,7 @@ services:
       --tool-call-parser glm47
       --reasoning-parser glm45
       --enable-auto-tool-choice
-      --served-model-name openai/glm47-flash
+      --served-model-name glm47-flash
       --max-num-batched-tokens 4096
       --max-num-seqs 64
       --load-format fastsafetensors

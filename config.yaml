@@ -3,7 +3,7 @@ model_list:
     litellm_params:
       drop_params: true
       #allowed_openai_params: ["reasoning_effort"]
-      model: "openai/glm47-flash"
+      model: "hosted_vllm/glm47-flash"
       api_base: "http://vllm-node:8000/v1"
       api_key: "sk-FAKE"
       max_tokens: 65536
