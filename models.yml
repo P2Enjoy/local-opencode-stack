@@ -1,3 +1,7 @@
+# VLLM Model Serving Configurations
+# Each model maps to a complete vllm serve command with all parameters
+# The run_vllm_agent.sh script reads MODEL from vars.env and executes the corresponding command
+
 glm47-flash: >
   vllm serve QuantTrio/GLM-4.7-Flash-AWQ
   --port 8000
@@ -14,3 +18,52 @@ glm47-flash: >
   --max-num-seqs 128
   --load-format fastsafetensors
   --kv-cache-dtype fp8
+
+glm47-flash-int4: >
+  vllm serve QuantTrio/GLM-4.7-Flash-int4
+  --port 8000
+  --host 0.0.0.0
+  --api-key sk-FAKE
+  --gpu-memory-utilization 0.85
+  --max-model-len 65536
+  --trust-remote-code
+  --tool-call-parser glm47
+  --reasoning-parser glm45
+  --enable-auto-tool-choice
+  --served-model-name vllm_agent
+  --max-num-batched-tokens 12288
+  --max-num-seqs 96
+  --load-format auto
+
+glm47-flash-int8: >
+  vllm serve QuantTrio/GLM-4.7-Flash-int8
+  --port 8000
+  --host 0.0.0.0
+  --api-key sk-FAKE
+  --gpu-memory-utilization 0.78
+  --max-model-len 32768
+  --trust-remote-code
+  --tool-call-parser glm47
+  --reasoning-parser glm45
+  --enable-auto-tool-choice
+  --served-model-name vllm_agent
+  --max-num-batched-tokens 8192
+  --max-num-seqs 64
+  --load-format auto
+
+glm47-flash-fp8: >
+  vllm serve QuantTrio/GLM-4.7-Flash-FP8
+  --port 8000
+  --host 0.0.0.0
+  --api-key sk-FAKE
+  --gpu-memory-utilization 0.88
+  --max-model-len 65536
+  --trust-remote-code
+  --tool-call-parser glm47
+  --reasoning-parser glm45
+  --enable-auto-tool-choice
+  --served-model-name vllm_agent
+  --max-num-batched-tokens 16384
+  --max-num-seqs 120
+  --load-format safetensors
+  --quantization fp8
