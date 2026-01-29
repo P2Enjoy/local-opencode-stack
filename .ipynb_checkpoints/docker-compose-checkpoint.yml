@@ -10,24 +10,13 @@ services:
     gpus: all
 
     env_file:
-      - ./env
+      - ./vars.env
 
     volumes:
-      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /home/you/.cache/huggingface:/root/.cache/huggingface
+      - ./run_vllm_agent.sh:/app/run_vllm_agent.sh:ro
 
-    command: >
-      vllm serve QuantTrio/GLM-4.7-Flash-AWQ
-      --port 8000
-      --host 0.0.0.0
-      --api-key ${OPENAI_API_KEY}
-      --kv-cache-dtype fp8
-      --gpu-memory-utilization 0.93
-      --max-model-len 128000
-      --trust-remote-code
-      --tool-call-parser glm47
-      --reasoning-parser glm45
-      --enable-auto-tool-choice
-      --served-model-name QuantTrio/GLM-4.7-Flash-AWQ
+    command: bash /app/run_vllm_agent.sh
 
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
@@ -36,13 +25,13 @@ services:
     restart: unless-stopped
 
     volumes:
-      - ./config.yml:/app/config.yaml
+      - ./config.yaml:/app/config.yaml
 
     ports:
       - "4000:4000"
 
     env_file:
-      - ./env
+      - ./vars.env
 
     depends_on:
       db:
@@ -66,8 +55,6 @@ services:
       POSTGRES_DB: litellm
       POSTGRES_USER: llmproxy
       POSTGRES_PASSWORD: dbpassword9090
-
-    # No ports: internal only
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
