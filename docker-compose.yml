@@ -14,24 +14,9 @@ services:
 
     volumes:
       - /home/you/.cache/huggingface:/root/.cache/huggingface
+      - ./run_vllm_agent.sh:/app/run_vllm_agent.sh:ro
 
-    command: >
-      vllm serve QuantTrio/GLM-4.7-Flash-AWQ
-      --port 8000
-      --host 0.0.0.0
-      --api-key sk-FAKE
-      --gpu-memory-utilization 0.92
-      --max-model-len 65536
-      --trust-remote-code
-      --tool-call-parser glm47
-      --reasoning-parser glm45
-      --enable-auto-tool-choice
-      --served-model-name glm47-flash
-      --max-num-batched-tokens 16384
-      --max-num-seqs 128
-      --load-format fastsafetensors
-      --kv-cache-dtype fp8
-#      --tensor-parallel-size 1
+    command: bash /app/run_vllm_agent.sh
 
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
