@@ -15,6 +15,7 @@ services:
     volumes:
       - /home/you/.cache/huggingface:/root/.cache/huggingface
       - ./run_vllm_agent.sh:/app/run_vllm_agent.sh:ro
+      - ./models.yml:/app/models.yml:ro
 
     command: bash /app/run_vllm_agent.sh
 
