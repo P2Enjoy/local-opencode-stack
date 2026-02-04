@@ -5,7 +5,8 @@ FROM scitrera/dgx-spark-vllm:0.15.0-t5
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
-        build-essential && \
+        build-essential \
+        curl && \
     rm -rf /var/lib/apt/lists/*
 
 # # Clone and install DeepGEMM
