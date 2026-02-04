@@ -1,0 +1,17 @@
+# LiteLLM Configuration Template
+# This is filled at runtime with values from vars.env defaults + models.yml overrides
+# Fixed parameters: model_name, model, api_base, api_key
+# Dynamic parameters: max_tokens, temperature, top_p, top_k, repetition_penalty
+
+model_list:
+  - model_name: "anthropic/*"
+    litellm_params:
+      allowed_openai_params: ["reasoning_effort"]
+      model: "hosted_vllm/vllm_agent"
+      api_base: "http://vllm-node:8000/v1"
+      api_key: "sk-FAKE"
+      max_tokens: {{ max_tokens }}
+      repetition_penalty: {{ repetition_penalty }}
+      temperature: {{ temperature }}
+      top_k: {{ top_k }}
+      top_p: {{ top_p }}
