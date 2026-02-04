@@ -15,3 +15,33 @@ model_list:
       temperature: {{ temperature }}
       top_k: {{ top_k }}
       top_p: {{ top_p }}
+
+litellm_settings:
+  # Drop provider-specific fields your backend will not understand
+  # (helps a lot with Anthropic-shaped traffic hitting OpenAI-compatible backends).
+  drop_params: true
+  # Keep timeouts finite so hung requests do not pin worker slots forever.
+  request_timeout: 120
+  # Logging full prompts/responses is expensive at scale.
+  turn_off_message_logging: true
+
+router_settings:
+  # LiteLLM recommends simple-shuffle for best performance (minimal routing overhead).
+  routing_strategy: simple-shuffle
+  # Your backend is local, retries often just amplify load during saturation.
+  num_retries: 0
+  timeout: 120
+  stream_timeout: 120
+
+general_settings:
+  # Backpressure knobs. Set these to match how much concurrency your vLLM can *actually* sustain.
+  # If you keep vLLM at --max-num-seqs 16, start here at 16 to avoid request pileups.
+  max_parallel_requests: 16
+  global_max_parallel_requests: 16
+  # Optional: reduce overhead further if you do not need spend logs, UI analytics, etc.
+  disable_spend_logs: true
+
+environment_variables:
+  # Avoid accidental connector bottlenecks (0 means no limit).
+  AIOHTTP_CONNECTOR_LIMIT: 0
+  AIOHTTP_CONNECTOR_LIMIT_PER_HOST: 0

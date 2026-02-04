@@ -66,21 +66,22 @@ step-3.5-flash-HCSW:
 step-3.5-flash:
   command: |
     vllm serve stepfun-ai/Step-3.5-Flash-FP8 \
-      --enable-expert-parallel --enable-eplb \
-      --disable-cascade-attn \
       --reasoning-parser step3p5 \
       --enable-auto-tool-choice \
       --tool-call-parser step3p5 \
-      --hf-overrides '{"num_nextn_predict_layers": 1}' \
-      --speculative_config '{"method": "step3p5_mtp", "num_speculative_tokens": 1}' \
       --trust-remote-code \
       --quantization fp8 \
-      --max-model-len auto \
-      --max-num-seqs 16 \
+      --kv-cache-dtype fp8 \
+      --max-model-len 32K \
+      --gpu-memory-utilization 0.96 \
+      --block-size 16 \
+      --max-num-seqs 24 \
+      --max-num-batched-tokens 16384 \
       --enable-chunked-prefill \
-      --calculate-kv-scales --kv-sharing-fast-prefill \
-      --load-format fastsafetensors \
-      --kv-cache-dtype fp8
+      --max-num-partial-prefills 4 \
+      --max-long-partial-prefills 2 \
+      --speculative_config '{"method":"step3p5_mtp","num_speculative_tokens":1}' \
+      --load-format fastsafetensors
   env:
     VLLM_USE_FLASHINFER_MOE_FP8: 1
     VLLM_ATTENTION_BACKEND: FLASH_ATTN
