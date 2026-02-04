@@ -6,7 +6,8 @@
 # and vLLM direct server with comprehensive test suites
 ###############################################################################
 
-set -e
+# Don't exit on errors - we want to run all tests
+set -o pipefail
 
 # Configuration
 LITELLM_HOST="${LITELLM_HOST:-localhost}"
@@ -266,7 +267,7 @@ test_streaming() {
 ###############################################################################
 
 check_vllm_health() {
-    log_info "Checking vLLM health at ${VLLM_URL}...\""
+    log_info "Checking vLLM health at ${VLLM_URL}..."
 
     if ! response=$(curl -s -m "$TIMEOUT" "${VLLM_URL}/health" 2>/dev/null); then
         log_error "Failed to connect to vLLM at ${VLLM_URL}"
@@ -284,7 +285,7 @@ check_vllm_health() {
 }
 
 list_vllm_models() {
-    log_info "Fetching available models from vLLM...\""
+    log_info "Fetching available models from vLLM..."
 
     response=$(curl -s -m "$TIMEOUT" "${VLLM_URL}/v1/models" \
         -H "Authorization: Bearer ${API_KEY}")
