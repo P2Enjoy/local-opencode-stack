@@ -26,11 +26,11 @@ services:
     command: bash /app/run_vllm_agent.sh
 
     healthcheck:
-      test: ["CMD-SHELL", "test -f /app/generated_configs/config.yaml && curl -s http://localhost:8000/v1/models | grep -q vllm_agent || exit 1"]
-      interval: 3s
-      timeout: 10s
-      retries: 30
-      start_period: 15s
+      test: ["CMD-SHELL", "test -f /app/generated_configs/config.yaml && curl -s -H 'Authorization: Bearer sk-FAKE' http://localhost:8000/v1/models | grep -q vllm_agent || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 10
+      start_period: 150s
 
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
@@ -56,9 +56,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:4000/health/liveliness || exit 1"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      timeout: 30s
+      retries: 10
+      start_period: 30s
 
   db:
     image: postgres:16

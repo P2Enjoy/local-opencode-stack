@@ -9,7 +9,7 @@
 glm47-flash:
   command: |
     vllm serve QuantTrio/GLM-4.7-Flash-AWQ \
-      --max-model-len 65536 \
+      --max-model-len 16384 \
       --trust-remote-code \
       --tool-call-parser glm47 \
       --reasoning-parser glm45 \
@@ -17,7 +17,7 @@ glm47-flash:
       --max-num-batched-tokens 16384 \
       --max-num-seqs 128 \
       --load-format fastsafetensors \
-      --kv-cache-dtype auto
+      --kv-cache-dtype fp8
   env:
     VLLM_USE_DEEP_GEMM: "0"
     VLLM_USE_FLASHINFER_MOE_FP8: "1"
@@ -29,24 +29,28 @@ glm47-flash:
     top_p: 0.8
     top_k: 20
     repetition_penalty: 1.05
-    max_tokens: 65536
+    max_tokens: 8192
 
-step-3.5-flash:
+# HCSW is for HIGH CONCURRENCY SMALL WINDOW
+step-3.5-flash-HCSW:
   command: |
     vllm serve stepfun-ai/Step-3.5-Flash-FP8 \
-      --max-concurrency 10 \
-      --enable-expert-parallel \
-      --disable-cascade-attn \
       --reasoning-parser step3p5 \
       --enable-auto-tool-choice \
       --tool-call-parser step3p5 \
-      --hf-overrides '{"num_nextn_predict_layers": 1}' \
-      --speculative_config '{"method": "step3p5_mtp", "num_speculative_tokens": 1}' \
       --trust-remote-code \
       --quantization fp8 \
-      --max-model-len 16384 \
-      --max-num-seqs 16 \
-      --enable-chunked-prefill
+      --kv-cache-dtype fp8 \
+      --max-model-len 8192 \
+      --gpu-memory-utilization 0.95 \
+      --max-num-seqs 64 \
+      --max-num-batched-tokens 16384 \
+      --block-size 16 \
+      --enable-chunked-prefill \
+      --max-num-partial-prefills 4 \
+      --max-long-partial-prefills 2 \
+      --speculative_config '{"method":"step3p5_mtp","num_speculative_tokens":1}' \
+      --load-format fastsafetensors
   env:
     VLLM_USE_FLASHINFER_MOE_FP8: 1
     VLLM_ATTENTION_BACKEND: FLASH_ATTN
@@ -57,4 +61,34 @@ step-3.5-flash:
     # VLLM_USE_FLASHINFER_SAMPLER: "0"
     # OMP_NUM_THREADS: "4"
   litellm:
-    max_tokens: 16384
+    max_tokens: 8192
+
+step-3.5-flash:
+  command: |
+    vllm serve stepfun-ai/Step-3.5-Flash-FP8 \
+      --enable-expert-parallel --enable-eplb \
+      --disable-cascade-attn \
+      --reasoning-parser step3p5 \
+      --enable-auto-tool-choice \
+      --tool-call-parser step3p5 \
+      --hf-overrides '{"num_nextn_predict_layers": 1}' \
+      --speculative_config '{"method": "step3p5_mtp", "num_speculative_tokens": 1}' \
+      --trust-remote-code \
+      --quantization fp8 \
+      --max-model-len auto \
+      --max-num-seqs 16 \
+      --enable-chunked-prefill \
+      --calculate-kv-scales --kv-sharing-fast-prefill \
+      --load-format fastsafetensors \
+      --kv-cache-dtype fp8
+  env:
+    VLLM_USE_FLASHINFER_MOE_FP8: 1
+    VLLM_ATTENTION_BACKEND: FLASH_ATTN
+    VLLM_FLASHINFER_MOE_BACKEND: latency
+    VLLM_USE_DEEP_GEMM: "0"
+    # VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER: 1
+    # VLLM_USE_FLASHINFER_MOE_FP16: "1"
+    # VLLM_USE_FLASHINFER_SAMPLER: "0"
+    # OMP_NUM_THREADS: "4"
+  litellm:
+    max_tokens: 8192
