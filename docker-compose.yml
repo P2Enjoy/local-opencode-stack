@@ -1,6 +1,8 @@
 services:
   vllm-node:
-    image: scitrera/dgx-spark-vllm:0.14.0-t5
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: vllm-container
     restart: unless-stopped
 
@@ -16,17 +18,28 @@ services:
       - /home/you/.cache/huggingface:/root/.cache/huggingface
       - ./run_vllm_agent.sh:/app/run_vllm_agent.sh:ro
       - ./models.yml:/app/models.yml:ro
+      - ./vars.env:/app/vars.env:ro
+      - ./generate_litellm_config.py:/app/generate_litellm_config.py:ro
+      - ./litellm_config.template.yaml:/app/litellm_config.template.yaml:ro
+      - litellm_config:/app/generated_configs
 
     command: bash /app/run_vllm_agent.sh
 
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/generated_configs/config.yaml && curl -s http://localhost:8000/v1/models | grep -q vllm_agent || exit 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 30
+      start_period: 15s
+
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
-    command: ["--config=/app/config.yaml"]
+    command: ["--config=/app/generated_configs/config.yaml"]
     container_name: litellm
     restart: unless-stopped
 
     volumes:
-      - ./config.yaml:/app/config.yaml
+      - litellm_config:/app/generated_configs
 
     ports:
       - "4000:4000"
@@ -38,7 +51,7 @@ services:
       db:
         condition: service_healthy
       vllm-node:
-        condition: service_started
+        condition: service_healthy
 
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:4000/health/liveliness || exit 1"]
@@ -69,3 +82,9 @@ services:
 volumes:
   postgres_data:
     name: litellm_postgres_data
+  litellm_config:
+    name: litellm_config
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
