@@ -24,7 +24,7 @@ python3 "$(dirname "$0")/generate_litellm_config.py" \
   --output-file /app/generated_configs/config.yaml || exit 1
 
 # Get the vllm serve command and model-specific env vars for the selected model from models.yml
-read -r COMMAND MODEL_ENV_JSON < <(python3 << 'PYTHON_EOF'
+python3 > /tmp/model_config.json << 'PYTHON_EOF'
 import yaml
 import os
 import sys
@@ -50,7 +50,8 @@ try:
         print(f"Error: Model '{model_name}' has no command defined", file=sys.stderr)
         sys.exit(1)
 
-    print(command, json.dumps(model_env))
+    # Output command and env as a single JSON object to avoid shell parsing issues
+    print(json.dumps({"command": command, "env": model_env}))
 except FileNotFoundError:
     print(f"Error: Configuration file not found: {models_file}", file=sys.stderr)
     print("Make sure models.yml is mounted in the container", file=sys.stderr)
@@ -59,10 +60,13 @@ except Exception as e:
     print(f"Error loading model configuration: {e}", file=sys.stderr)
     sys.exit(1)
 PYTHON_EOF
-)
+
+# Parse the JSON output
+COMMAND=$(python3 -c "import json; c = json.load(open('/tmp/model_config.json')); print(c['command'])")
+MODEL_ENV_JSON=$(python3 -c "import json; c = json.load(open('/tmp/model_config.json')); print(json.dumps(c['env']))")
 
 # Parse and apply model-specific environment variables
-MODEL_ENV_DICT=$(python3 -c "import json, sys; d = json.loads('$MODEL_ENV_JSON'); print(' '.join([f'{k}={v}' for k, v in d.items()]))")
+MODEL_ENV_DICT=$(python3 -c "import json; d = json.loads('$MODEL_ENV_JSON'); print(' '.join([f'{k}={v}' for k, v in d.items()]))")
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "VLLM Agent Configuration"
@@ -80,4 +84,5 @@ for var_assignment in $MODEL_ENV_DICT; do
 done
 
 # Execute the command, replacing the current shell process
-exec bash -c "$COMMAND --api-key sk-FAKE --served-model-name vllm_agent --gpu-memory-utilization 0.85"
+# Note: The command already includes --api-key, --served-model-name, and --gpu-memory-utilization
+exec bash -c "$COMMAND --port 8000 --host 0.0.0.0 --api-key sk-FAKE --gpu-memory-utilization 0.85 --served-model-name vllm_agent"

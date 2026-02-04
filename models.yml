@@ -9,23 +9,19 @@
 glm47-flash:
   command: |
     vllm serve QuantTrio/GLM-4.7-Flash-AWQ \
-      --port 8000 \
-      --host 0.0.0.0 \
-      --api-key sk-FAKE \
-      --gpu-memory-utilization 0.92 \
       --max-model-len 65536 \
       --trust-remote-code \
       --tool-call-parser glm47 \
       --reasoning-parser glm45 \
       --enable-auto-tool-choice \
-      --served-model-name vllm_agent \
       --max-num-batched-tokens 16384 \
       --max-num-seqs 128 \
       --load-format fastsafetensors \
-      --kv-cache-dtype fp8
+      --kv-cache-dtype auto
   env:
     VLLM_USE_DEEP_GEMM: "0"
     VLLM_USE_FLASHINFER_MOE_FP8: "1"
+    VLLM_MLA_DISABLE: "1"
     # VLLM_USE_FLASHINFER_SAMPLER: "0"
     # OMP_NUM_THREADS: "4"
   litellm:
@@ -37,15 +33,8 @@ glm47-flash:
 
 step-3.5-flash:
   command: |
-    vllm bench serve \
-      --backend vllm \
-      --model stepfun-ai/Step-3.5-Flash-FP8 \
-      --endpoint /v1/completions \
-      --dataset-name random \
-      --random-input 2048 \
-      --random-output 1024 \
+    vllm serve stepfun-ai/Step-3.5-Flash-FP8 \
       --max-concurrency 10 \
-      --num-prompt 100 \
       --enable-expert-parallel \
       --disable-cascade-attn \
       --reasoning-parser step3p5 \
