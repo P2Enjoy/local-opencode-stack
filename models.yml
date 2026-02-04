@@ -29,7 +29,7 @@ glm47-flash:
     top_p: 0.8
     top_k: 20
     repetition_penalty: 1.05
-    max_tokens: 8192
+    max_tokens: 128K
 
 # HCSW is for HIGH CONCURRENCY SMALL WINDOW
 step-3.5-flash-HCSW:
@@ -61,7 +61,7 @@ step-3.5-flash-HCSW:
     # VLLM_USE_FLASHINFER_SAMPLER: "0"
     # OMP_NUM_THREADS: "4"
   litellm:
-    max_tokens: 8192
+    max_tokens: 64K
 
 step-3.5-flash:
   command: |
@@ -92,4 +92,4 @@ step-3.5-flash:
     # VLLM_USE_FLASHINFER_SAMPLER: "0"
     # OMP_NUM_THREADS: "4"
   litellm:
-    max_tokens: 8192
+    max_tokens: 96K
