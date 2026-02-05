@@ -30,8 +30,8 @@ router_settings:
   routing_strategy: simple-shuffle
   # Your backend is local, retries often just amplify load during saturation.
   num_retries: 0
-  timeout: 120
-  stream_timeout: 120
+  timeout: 300
+  stream_timeout: 240
 
 general_settings:
   # Backpressure knobs. Set these to match how much concurrency your vLLM can *actually* sustain.
