@@ -14,6 +14,30 @@ This directory contains pre-configured vLLM deployments for different use cases.
 
 ---
 
+## 🧾 Model Card Example
+
+### `step-3.5-flash-full` (`./step-3.5-flash.yml`)
+
+This is a concrete model card-style summary for one configuration in `models/`.
+
+| Field | Value |
+|------|-------|
+| **Model Name** | `step-3.5-flash-full` |
+| **Upstream Model** | `stepfun-ai/Step-3.5-Flash-FP8` |
+| **Primary Use Case** | Long-context reasoning, code generation, complex problem solving |
+| **Context Length** | `auto` (full model capability) |
+| **Quantization** | `fp8` |
+| **KV Cache Dtype** | `fp8` |
+| **Max Concurrency** | `--max-num-seqs 24` |
+| **Batch Token Budget** | `--max-num-batched-tokens 16K` |
+| **Tool Calling** | Enabled (`--enable-auto-tool-choice`, `--tool-call-parser step3p5`) |
+| **Reasoning Parser** | `step3p5` |
+| **Speculative Decoding** | Enabled (`step3p5_mtp`, `num_speculative_tokens=1`) |
+| **Load Format** | `fastsafetensors` |
+| **Key Runtime Env** | `VLLM_ATTENTION_BACKEND=FLASH_ATTN`, `VLLM_USE_FLASHINFER_MOE_FP8=1` |
+
+---
+
 ## 🎯 Choose Right Model
 
 ### Scenario 1: General-Purpose Assistant
