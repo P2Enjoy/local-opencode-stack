@@ -1,5 +1,5 @@
 # Extend the existing vllm image with DeepGEMM for fp8 computing
-FROM scitrera/dgx-spark-vllm:0.15.0-t5
+FROM scitrera/dgx-spark-vllm:0.15.1-t5
 
 # Install dependencies in one layer for better caching
 RUN apt-get update && \
