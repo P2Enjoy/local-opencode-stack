@@ -15,9 +15,10 @@ services:
       - ./vars.env
 
     volumes:
-      - /home/you/.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
       - ./run_vllm_agent.sh:/app/run_vllm_agent.sh:ro
-      - ./models.yml:/app/models.yml:ro
+      - ./models:/app/models:ro
+      - ./scripts:/app/scripts:ro
       - ./vars.env:/app/vars.env:ro
       - ./generate_litellm_config.py:/app/generate_litellm_config.py:ro
       - ./litellm_config.template.yaml:/app/litellm_config.template.yaml:ro

@@ -4,7 +4,7 @@
 # Dynamic parameters: max_tokens, temperature, top_p, top_k, repetition_penalty
 
 model_list:
-  - model_name: "anthropic/*"
+  - model_name: "*"
     litellm_params:
       allowed_openai_params: ["reasoning_effort"]
       model: "hosted_vllm/vllm_agent"

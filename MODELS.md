@@ -1581,7 +1581,7 @@ litellm:
 curl -H "Authorization: Bearer sk-FAKE" http://localhost:8000/v1/models
 
 # Restart containers to apply MODEL env var
-docker-compose restart
+docker compose restart
 ```
 
 #### 8. MoE Model Performance Issues

@@ -30,7 +30,7 @@ print_warning() {
 print_header "vLLM with DeepGEMM Build Helper"
 
 # Check if docker compose is installed
-if ! command -v docker compose &> /dev/null; then
+if ! command -v docker &> /dev/null || ! docker compose version > /dev/null 2>&1; then
     print_error "docker compose is not installed"
     exit 1
 fi

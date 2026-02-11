@@ -1,11 +1,13 @@
 # Local Claude Launcher Guide
 
-This guide explains the two launcher scripts created for testing and using the local LiteLLM proxy with Claude Code.
+This guide explains launcher scripts for testing and using the local LiteLLM proxy.
 
 ## Overview
 
 - **test.sh** - Tests the LiteLLM proxy with Anthropic-style API calls
 - **local_claude.sh** - Launches Claude Code routed through the local LiteLLM proxy
+- **open_code.sh** - Launches OpenCode.ai routed through the local LiteLLM proxy
+- **local_codex.sh** - Launches Codex CLI routed through the local LiteLLM proxy
 
 ## Setup
 
@@ -13,14 +15,14 @@ This guide explains the two launcher scripts created for testing and using the l
 
 ```bash
 cd /home/p2enjoy/jupyterlab/vllm-server/launchers
-docker-compose up -d
+docker compose up -d
 ```
 
 Or from the root directory:
 
 ```bash
 cd /home/p2enjoy/jupyterlab/vllm-server
-docker-compose up -d
+docker compose up -d
 ```
 
 This starts:
@@ -31,7 +33,7 @@ This starts:
 ### 2. Verify Services are Running
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 All three services should show `healthy` status.
@@ -153,10 +155,10 @@ These are automatically configured from `vars.env`:
 
 ```bash
 # Check if services are running
-docker-compose ps
+docker compose ps
 
 # If not running:
-docker-compose up -d
+docker compose up -d
 
 # Check proxy health manually
 curl http://localhost:4000/health/liveliness
@@ -180,13 +182,13 @@ source ~/.bashrc
 
 ```bash
 # Check litellm logs
-docker-compose logs litellm
+docker compose logs litellm
 
 # Check vllm-node logs
-docker-compose logs vllm-node
+docker compose logs vllm-node
 
 # Restart services
-docker-compose restart
+docker compose restart
 ```
 
 ### Claude Code Doesn't Connect to Proxy
@@ -207,7 +209,7 @@ curl -X GET http://localhost:4000/health/liveliness
 ```bash
 # 1. Start services in the background
 cd /home/p2enjoy/jupyterlab/vllm-server
-docker-compose up -d
+docker compose up -d
 
 # 2. Wait for services to be healthy
 sleep 10
@@ -232,7 +234,7 @@ local_claude.sh
 
 - **First time setup** - Downloading models can take 5-10 minutes
 - **Health checks** - Add `--no-check` flag to skip if you know services are running
-- **Model context** - Check `models.yml` for context window limits
+- **Model context** - Check `models/*.yml` for context window limits
 - **GPU memory** - Adjust `docker-compose.yml` if needed
 
 ## Files Reference
@@ -243,13 +245,13 @@ local_claude.sh
 | `launchers/test.sh` | Test suite for the proxy - validates connection |
 | `vars.env` | Configuration variables (in root directory) |
 | `docker-compose.yml` | Service definitions (in root directory) |
-| `models.yml` | Model-specific settings (in root directory) |
+| `models/*.yml` | Model-specific settings (source fragments in root directory) |
 | `litellm_config.template.yaml` | LiteLLM proxy configuration (in root directory) |
 | `LAUNCHER_GUIDE.md` | This file - complete usage documentation |
 
 ## Next Steps
 
-1. Start the services: `docker-compose up -d`
+1. Start the services: `docker compose up -d`
 2. Test the connection: `./test.sh`
 3. Launch Claude Code: `local_claude.sh`
 4. Add to PATH: `source ~/.bashrc` (already done)

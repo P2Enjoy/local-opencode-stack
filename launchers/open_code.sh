@@ -20,7 +20,7 @@
 #
 ###############################################################################
 
-set -e
+set -euo pipefail
 
 # Get the directory where this script is located (works from any path)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,6 +35,7 @@ PROXY_URL="http://${LITELLM_HOST}:${LITELLM_PORT}"
 CHECK_HEALTH=true
 VERBOSE=false
 SHOW_HELP=false
+DRY_RUN=false
 
 # Color codes
 RED='\033[0;31m'
@@ -62,6 +63,39 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}✗  $1${NC}" >&2
+}
+
+require_arg() {
+    local flag="$1"
+    local value="${2:-}"
+    if [ -z "$value" ] || [[ "$value" == --* ]]; then
+        log_error "Missing value for ${flag}"
+        exit 1
+    fi
+}
+
+load_selected_vars() {
+    local file="$1"
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line#"${line%%[![:space:]]*}"}"
+        [ -z "$line" ] && continue
+        [[ "$line" == \#* ]] && continue
+        [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
+
+        local key="${BASH_REMATCH[1]}"
+        local value="${BASH_REMATCH[2]}"
+        value="${value#"${value%%[![:space:]]*}"}"
+        value="${value%"${value##*[![:space:]]}"}"
+        if [[ "$value" =~ ^\".*\"$ ]] || [[ "$value" =~ ^\'.*\'$ ]]; then
+            value="${value:1:-1}"
+        fi
+
+        case "$key" in
+            ANTHROPIC_*|CLAUDE_CODE_*|HF_TOKEN|MODEL)
+                export "$key=$value"
+                ;;
+        esac
+    done < "$file"
 }
 
 print_help() {
@@ -115,7 +149,7 @@ SETUP:
      curl -fsSL https://opencode.ai/install | bash
 
   2. Start the services:
-     docker-compose -f /home/p2enjoy/jupyterlab/vllm-server/docker-compose.yml up -d
+     docker compose -f /home/p2enjoy/jupyterlab/vllm-server/docker-compose.yml up -d
 
   3. Test the connection:
      /home/p2enjoy/jupyterlab/vllm-server/launchers/test.sh
@@ -144,7 +178,7 @@ OPENCODE FEATURES:
   - Privacy-first (no code storage)
 
 WORKFLOW:
-  1. Start services: docker-compose up -d
+  1. Start services: docker compose up -d
   2. Launch: open_code.sh
   3. Use commands like:
      - code [filename]      Generate/edit code
@@ -164,7 +198,7 @@ TROUBLESHOOTING:
 
   Can't connect to proxy:
     1. Check proxy health: open_code.sh --verbose
-    2. Start services: docker-compose -f /home/p2enjoy/jupyterlab/vllm-server/docker-compose.yml up -d
+    2. Start services: docker compose -f /home/p2enjoy/jupyterlab/vllm-server/docker-compose.yml up -d
     3. Test connection: /home/p2enjoy/jupyterlab/vllm-server/launchers/test.sh
 
   Environment variables not set:
@@ -177,12 +211,12 @@ EOF
 check_health() {
     log_info "Checking LiteLLM proxy at ${PROXY_URL}..."
 
-    if ! timeout 5 curl -s "${PROXY_URL}/health/liveliness" > /dev/null 2>&1; then
+    if ! timeout 5 curl -fsS "${PROXY_URL}/health/liveliness" > /dev/null 2>&1; then
         log_error "LiteLLM proxy is not responding at ${PROXY_URL}"
         log_info ""
         log_info "To start the services, run:"
         log_info "  cd ${PROJECT_DIR}"
-        log_info "  docker-compose up -d"
+        log_info "  docker compose up -d"
         log_info ""
         log_info "To skip this check in the future, use: open_code.sh --no-check"
         return 1
@@ -199,8 +233,8 @@ load_environment() {
         return 1
     fi
 
-    # Source the vars.env file, but only export relevant Anthropic variables
-    eval "$(grep '^[^#]*=' "$VARS_FILE" | grep -E '(ANTHROPIC|CLAUDE_CODE|HF_TOKEN|MODEL)')"
+    # Load selected vars from vars.env without eval.
+    load_selected_vars "$VARS_FILE"
 
     # Override with environment-specific settings
     export ANTHROPIC_BASE_URL="${PROXY_URL}"
@@ -215,10 +249,10 @@ show_environment() {
     echo "  ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL}"
     echo "  ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:0:10}..."
     echo "  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: ${CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC}"
-    if [ -n "$MODEL" ]; then
+    if [ -n "${MODEL:-}" ]; then
         echo "  MODEL: ${MODEL}"
     fi
-    if [ -n "$HF_TOKEN" ]; then
+    if [ -n "${HF_TOKEN:-}" ]; then
         echo "  HF_TOKEN: ${HF_TOKEN:0:10}..."
     fi
     echo ""
@@ -278,16 +312,19 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --host)
+            require_arg "--host" "${2:-}"
             LITELLM_HOST="$2"
             PROXY_URL="http://${LITELLM_HOST}:${LITELLM_PORT}"
             shift 2
             ;;
         --port)
+            require_arg "--port" "${2:-}"
             LITELLM_PORT="$2"
             PROXY_URL="http://${LITELLM_HOST}:${LITELLM_PORT}"
             shift 2
             ;;
         --token)
+            require_arg "--token" "${2:-}"
             ANTHROPIC_AUTH_TOKEN="$2"
             shift 2
             ;;

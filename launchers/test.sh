@@ -58,7 +58,7 @@ check_litellm_health() {
 
     if ! response=$(curl -s -m "$TIMEOUT" "${LITELLM_URL}/health/liveliness" 2>/dev/null); then
         log_error "Failed to connect to litellm proxy at ${LITELLM_URL}"
-        log_info "Make sure the litellm proxy is running. Start it with: docker-compose up -d litellm"
+        log_info "Make sure the litellm proxy is running. Start it with: docker compose up -d litellm"
         return 1
     fi
 
@@ -271,7 +271,7 @@ check_vllm_health() {
 
     if ! response=$(curl -s -m "$TIMEOUT" "${VLLM_URL}/health" 2>/dev/null); then
         log_error "Failed to connect to vLLM at ${VLLM_URL}"
-        log_info "Make sure vLLM is running. Start it with: docker-compose up -d vllm"
+        log_info "Make sure vLLM is running. Start it with: docker compose up -d vllm-node"
         return 1
     fi
 

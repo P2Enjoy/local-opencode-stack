@@ -10,7 +10,8 @@ The configuration system is designed with **separation of concerns**, where diff
 
 ```
 Configuration Files
-├── models.yml                      ← VLLM model serving parameters (see MODELS.md)
+├── models/*.yml                   ← Per-model VLLM fragments (see MODELS.md)
+├── scripts/gen_models_yml.sh      ← Runtime generator for unified models.yml
 ├── litellm_config.template.yaml   ← LiteLLM proxy configuration template
 ├── generate_litellm_config.py     ← Generates LiteLLM config from template + models.yml
 ├── vars.env                       ← Runtime environment variables
@@ -33,10 +34,10 @@ Configuration Files
 - `VLLM_MLA_DISABLE=1` - Disable MLA (model-specific)
 - Various other VLLM optimization flags (see MODELS.md for details)
 
-**Used by:** docker-compose.yml (via `env_file`)
+**Used by:** `docker-compose.yml` (via `env_file`)
 
-### 2. `models.yml` (VLLM Configuration)
-**Purpose:** Centralized storage of VLLM serving commands and LiteLLM parameters for different model variants.
+### 2. `models/*.yml` + generated `models.yml` (VLLM Configuration)
+**Purpose:** Store model configs as fragments in `models/`, then generate unified `models.yml` at container start.
 
 **Structure:**
 Each entry contains three sections:
@@ -117,11 +118,12 @@ model_list:
 - **Port:** 8000 (VLLM API)
 - **GPU:** All available GPUs (`gpus: all`)
 - **Execution:** Runs `run_vllm_agent.sh` which:
-  1. Generates LiteLLM config from template + models.yml
-  2. Launches vLLM with model-specific command + environment
+  1. Generates `/app/generated_configs/models.yml` from `models/*.yml`
+  2. Generates LiteLLM config from template + models.yml
+  3. Launches vLLM with model-specific command + environment
 - **Volumes:**
-  - HuggingFace cache: `/home/you/.cache/huggingface` → `/root/.cache/huggingface`
-  - Config files (read-only): `models.yml`, `vars.env`, scripts, templates
+  - HuggingFace cache: `${HOME}/.cache/huggingface` → `/root/.cache/huggingface`
+  - Config files (read-only): `models/`, `vars.env`, scripts, templates
   - Shared volume: `litellm_config` (tmpfs) for generated config.yaml
 - **Health Check:** Validates vLLM API is responding and model is loaded
 
@@ -146,7 +148,7 @@ model_list:
 
 **What it does:**
 1. **Validate Environment**
-   - Checks for required files (models.yml, vars.env, templates)
+   - Checks for required files (`models/`, vars.env, templates)
    - Reads `MODEL` environment variable
    - Validates Python and dependencies are available
 
@@ -165,7 +167,7 @@ model_list:
    - Executes the `vllm serve` command with all parameters
 
 **Error Handling:**
-- Validates model exists in `models.yml` (lists available if not)
+- Validates model exists in generated `models.yml` (lists available if not)
 - Checks for missing configuration files
 - Shows detailed error messages for troubleshooting
 
@@ -173,7 +175,7 @@ model_list:
 
 ### Container Startup
 ```
-docker-compose up
+docker compose up
     ↓
     ├─→ db service starts first
     │   └─ Initializes PostgreSQL database
@@ -181,7 +183,7 @@ docker-compose up
     │
     ├─→ vllm-node service starts
     │   ├─ Loads vars.env (MODEL="step-3.5-flash")
-    │   ├─ Mounts models.yml, templates, scripts
+    │   ├─ Mounts models/, templates, scripts
     │   ├─ Runs run_vllm_agent.sh
     │   │   ├─ Generates config.yaml from template + models.yml
     │   │   ├─ Reads MODEL variable
@@ -219,7 +221,7 @@ To change which model variant runs:
 MODEL="glm47-flash"  # or "step-3.5-flash"
 
 # Restart both services (config needs regeneration)
-docker-compose restart
+docker compose restart
 ```
 
 The `run_vllm_agent.sh` script will automatically:
@@ -228,26 +230,26 @@ The `run_vllm_agent.sh` script will automatically:
 
 ## Adding Custom Models
 
-### Step 1: Add to models.yml
+### Step 1: Add a model fragment under `models/`
+Create `models/my-model.yml`:
 ```yaml
-my-model:
-  command: |
-    vllm serve MyOrg/my-model-name \
-      --max-model-len 16384 \
-      --max-num-seqs 256 \
-      --gpu-memory-utilization 0.90 \
-      --quantization awq \
-      --kv-cache-dtype fp8 \
-      --trust-remote-code
+command: |
+  vllm serve MyOrg/my-model-name \
+    --max-model-len 16384 \
+    --max-num-seqs 256 \
+    --gpu-memory-utilization 0.90 \
+    --quantization awq \
+    --kv-cache-dtype fp8 \
+    --trust-remote-code
 
-  env:
-    VLLM_ATTENTION_BACKEND: "FLASH_ATTN"
-    # Model-specific environment variables
+env:
+  VLLM_ATTENTION_BACKEND: "FLASH_ATTN"
+  # Model-specific environment variables
 
-  litellm:
-    temperature: 0.7
-    top_p: 0.9
-    max_tokens: 8192
+litellm:
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 8192
 ```
 
 > **📖 For all available vLLM parameters, see [MODELS.md](MODELS.md)**
@@ -259,7 +261,7 @@ MODEL="my-model"
 
 ### Step 3: Restart
 ```bash
-docker-compose restart
+docker compose restart
 ```
 
 ## Configuration Best Practices
@@ -275,7 +277,7 @@ docker-compose restart
 
 ### Environment Variables
 - Keep sensitive tokens in `vars.env`, never in YAML config
-- Model-specific environment variables go in `models.yml` under `env` section
+- Model-specific environment variables go in `models/<name>.yml` under `env`
 - Use `VLLM_*` prefix for vLLM-specific runtime variables
 
 ### Container Health
@@ -289,7 +291,7 @@ docker-compose restart
 
 ### View available models
 ```bash
-python3 -c "import yaml; print(list(yaml.safe_load(open('models.yml')).keys()))"
+find models -maxdepth 1 -name '*.yml' -type f -printf '%f\n' | sed 's/\.yml$//' | sort
 ```
 
 ### Check container logs
@@ -301,7 +303,7 @@ docker logs litellm_db         # Database logs
 
 ### Validate YAML syntax
 ```bash
-python3 -c "import yaml; yaml.safe_load(open('models.yml')); print('✓ Valid')"
+python3 -c "import yaml,glob; [yaml.safe_load(open(p)) for p in glob.glob('models/*.yml')]; print('✓ Valid')"
 ```
 
 ### Test API endpoint
@@ -319,7 +321,7 @@ curl -X POST http://localhost:4000/v1/chat/completions \
 
 Before deploying, verify:
 - [ ] `vars.env` exists with `MODEL` variable set to valid model name
-- [ ] `models.yml` contains the selected model with all three sections (command, env, litellm)
+- [ ] `models/<selected>.yml` exists with command/env/litellm sections
 - [ ] `litellm_config.template.yaml` exists with correct placeholders
 - [ ] `generate_litellm_config.py` is present and executable
 - [ ] `run_vllm_agent.sh` is executable (`chmod +x`)
@@ -338,14 +340,14 @@ chmod +x run_vllm_agent.sh
 
 Config files should be readable:
 ```bash
-chmod 644 models.yml config.yaml vars.env
+chmod 644 models/*.yml litellm_config.template.yaml vars.env
 ```
 
 ## Summary
 
 Your configuration system provides:
 ✓ **Multi-layered configuration** - Global defaults + model-specific overrides
-✓ **Centralized model management** - All models defined in `models.yml`
+✓ **Centralized model management** - Model fragments in `models/*.yml` merged at runtime
 ✓ **Dynamic LiteLLM config generation** - Template-based with runtime merging
 ✓ **Clear separation of concerns** - Each file has a specific purpose
 ✓ **Easy model switching** - Single `MODEL` variable changes everything
@@ -365,10 +367,10 @@ Your configuration system provides:
 echo 'MODEL="step-3.5-flash"' >> vars.env
 
 # 2. Start all services
-docker-compose up -d
+docker compose up -d
 
 # 3. Monitor startup
-docker-compose logs -f vllm-node
+docker compose logs -f vllm-node
 
 # 4. Wait for "Application startup complete"
 
