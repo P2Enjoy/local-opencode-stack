@@ -6,6 +6,8 @@ command: |
     --enable-auto-tool-choice \
     --tool-call-parser qwen3_xml \
     --load-format fastsafetensors \
+    --attention-backend flashinfer \
+    --enable-prefix-caching \
     --kv-cache-dtype fp8
 env:
   SAFETENSORS_FAST_GPU: "1"
@@ -14,7 +16,7 @@ env:
   VLLM_FLASHINFER_MOE_BACKEND: "latency"
   VLLM_USE_DEEP_GEMM: "0"
   VLLM_USE_TRTLLM_ATTENTION: "0"
-  VLLM_ATTENTION_BACKEND: "FLASH_ATTN"
+  # VLLM_ATTENTION_BACKEND: "FLASH_ATTN"
 litellm:
   temperature: 0.95
   top_p: 0.95
