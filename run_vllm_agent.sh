@@ -150,6 +150,8 @@ fi
 if ! printf '%s\n' "$FINAL_COMMAND" | grep -Eq '(^|[[:space:]])--served-model-name([[:space:]]|=)'; then
     FINAL_COMMAND="$FINAL_COMMAND --served-model-name vllm_agent"
 fi
+if ! printf '%s\n' "$FINAL_COMMAND" | grep -Eq '(^|[[:space:]])--gpu-memory-utilization([[:space:]]|=)'; then
+    FINAL_COMMAND="$FINAL_COMMAND --gpu-memory-utilization 0.75"
+fi
 
-exec bash -c "$FINAL_COMMAND --gpu-memory-utilization 0.7 \
-"
+exec bash -c "$FINAL_COMMAND"
