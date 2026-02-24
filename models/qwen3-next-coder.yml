@@ -10,7 +10,7 @@ command: |
   vllm serve unsloth/Qwen3-Coder-Next-FP8-Dynamic \
     --tokenizer-mode auto \
     --load-format fastsafetensors \
-    --kv-cache-dtype fp8 \
+    --kv-cache-dtype fp8
 env:
   SAFETENSORS_FAST_GPU: "1"
   VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
