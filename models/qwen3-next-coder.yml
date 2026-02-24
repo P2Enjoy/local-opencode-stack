@@ -16,8 +16,8 @@ env:
   VLLM_USE_TRTLLM_ATTENTION: "0"
   VLLM_ATTENTION_BACKEND: "FLASH_ATTN"
 litellm:
-  temperature: 0.7
-  top_p: 0.8
-  top_k: 20
-  repetition_penalty: 1.05
+  temperature: 0.95
+  top_p: 0.95
+  top_k: 40
+  repetition_penalty: 1.1
   max_tokens: 128K
