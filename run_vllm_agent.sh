@@ -18,15 +18,39 @@ if [ -f "$VARS_FILE" ]; then
     set +a
 fi
 
-MODEL="${MODEL:-glm47-flash}"
+# Load secret files from /app/secrets and Docker's /run/secrets.
+# Each filename is treated as an env var key and file content as value.
+SECRETS_HELPER="${SECRETS_HELPER:-/app/scripts/load_secrets_env.sh}"
+SECRETS_DIR="${SECRETS_DIR:-/app/secrets}"
+DOCKER_SECRETS_DIR="${DOCKER_SECRETS_DIR:-/run/secrets}"
+if [ -f "$SECRETS_HELPER" ]; then
+    # shellcheck disable=SC1090
+    source "$SECRETS_HELPER"
+    load_secrets_dir "$SECRETS_DIR"
+    load_secrets_dir "$DOCKER_SECRETS_DIR"
+fi
+
+MODEL="${MODEL:-}"
 GENERATED_MODELS_FILE="/app/generated_configs/models.yml"
+
+if [ -z "$MODEL" ]; then
+    echo "Error: MODEL environment variable is required." >&2
+    echo "Set MODEL to a model key from /app/models (filename without .yml)." >&2
+    if [ -d /app/models ]; then
+        AVAILABLE_MODELS="$(find /app/models -maxdepth 1 -type f -name '*.yml' -printf '%f\n' | sed -E 's/\.yml$//' | sort | tr '\n' ' ')"
+        if [ -n "$AVAILABLE_MODELS" ]; then
+            echo "Available models: $AVAILABLE_MODELS" >&2
+        fi
+    fi
+    exit 1
+fi
 
 # Build models.yml inside the container from model fragments.
 # If MODEL is set, only that model fragment is included.
 echo "Generating models.yml..."
 mkdir -p /app/generated_configs
 /app/scripts/gen_models_yml.sh \
-  --model "${MODEL:-}" \
+  --model "${MODEL}" \
   || exit 1
 
 # Generate LiteLLM config.yaml to shared volume
@@ -45,8 +69,12 @@ import os
 import sys
 import json
 
-model_name = os.environ.get('MODEL', 'glm47-flash')
+model_name = os.environ.get('MODEL')
 models_file = '/app/generated_configs/models.yml'
+
+if not model_name:
+    print("Error: MODEL environment variable is required", file=sys.stderr)
+    sys.exit(1)
 
 try:
     with open(models_file, 'r') as f:
@@ -123,4 +151,5 @@ if ! printf '%s\n' "$FINAL_COMMAND" | grep -Eq '(^|[[:space:]])--served-model-na
     FINAL_COMMAND="$FINAL_COMMAND --served-model-name vllm_agent"
 fi
 
-exec bash -c "$FINAL_COMMAND"
+exec bash -c "$FINAL_COMMAND --gpu-memory-utilization 0.7 \
+"

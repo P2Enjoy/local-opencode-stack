@@ -16,6 +16,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 VARS_FILE="${PROJECT_DIR}/vars.env"
+SECRETS_DIR="${SECRETS_DIR:-${PROJECT_DIR}/secrets}"
+SECRETS_HELPER="${PROJECT_DIR}/scripts/load_secrets_env.sh"
 
 # Defaults
 LITELLM_HOST="${LITELLM_HOST:-localhost}"
@@ -136,6 +138,11 @@ load_environment() {
 
     # Load selected vars from vars.env without eval.
     load_selected_vars "$VARS_FILE"
+    if [ -f "$SECRETS_HELPER" ]; then
+        # shellcheck disable=SC1090
+        source "$SECRETS_HELPER"
+        load_secrets_dir "$SECRETS_DIR" >/dev/null
+    fi
 
     MODEL_NAME="${MODEL:-$MODEL_NAME}"
     CODEX_MODEL="${CODEX_MODEL:-anthropic/${MODEL_NAME}}"

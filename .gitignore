@@ -63,5 +63,6 @@ Thumbs.db
 # Project-specific
 *.pem
 *.key
-secrets/
+secrets/*
+!secrets/README.md
 models/

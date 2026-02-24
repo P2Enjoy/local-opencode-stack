@@ -1,0 +1,27 @@
+# Qwen/Qwen3-Coder-Next-FP8
+# 
+# Disabled options for compatibility
+#    --compilation_config.pass_config.enable_fi_allreduce_fusion true \
+#    --compilation_config.pass_config.enable_noop true \
+#    --no-enable-chunked-prefill \
+#    --speculative-config '{"method": "qwen3_next_mtp", "num_speculative_tokens": 2}' \
+description: Code generation and analysis
+command: |
+  vllm serve unsloth/Qwen3-Coder-Next-FP8-Dynamic \
+    --tokenizer-mode auto \
+    --load-format fastsafetensors \
+    --kv-cache-dtype fp8 \
+env:
+  SAFETENSORS_FAST_GPU: "1"
+  VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
+  # VLLM_USE_FLASHINFER_MOE_FP8: "1"
+  VLLM_FLASHINFER_MOE_BACKEND: "latency"
+  VLLM_USE_DEEP_GEMM: "0"
+  VLLM_USE_TRTLLM_ATTENTION: "0"
+  VLLM_ATTENTION_BACKEND: "FLASH_ATTN"
+litellm:
+  temperature: 0.7
+  top_p: 0.8
+  top_k: 20
+  repetition_penalty: 1.05
+  max_tokens: 128K

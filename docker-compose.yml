@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: vllm-container
-    restart: unless-stopped
+    # restart: unless-stopped
 
     ports:
       - "8000:8000"
@@ -13,11 +13,16 @@ services:
 
     env_file:
       - ./vars.env
+    environment:
+      # MODEL is selected by runMe.sh via `env MODEL=<name> docker compose up`.
+      # Keep a default for direct `docker compose up` usage.
+      MODEL: ${MODEL:-glm47-flash}
 
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
       - ./run_vllm_agent.sh:/app/run_vllm_agent.sh:ro
       - ./models:/app/models:ro
+      - ./secrets:/app/secrets:ro
       - ./scripts:/app/scripts:ro
       - ./vars.env:/app/vars.env:ro
       - ./generate_litellm_config.py:/app/generate_litellm_config.py:ro
@@ -37,7 +42,7 @@ services:
     image: ghcr.io/berriai/litellm:main-stable
     command: ["--config=/app/generated_configs/config.yaml"]
     container_name: litellm
-    restart: unless-stopped
+    # restart: unless-stopped
 
     volumes:
       - litellm_config:/app/generated_configs

@@ -1,0 +1,22 @@
+# GLM-4.7 Flash AWQ Configuration
+description: General-purpose reasoning and tool calling
+command: |
+  vllm serve QuantTrio/GLM-4.7-Flash-AWQ \
+    --max-model-len 128K \
+    --tool-call-parser glm47 \
+    --reasoning-parser glm45 \
+    --enable-auto-tool-choice \
+    --max-num-batched-tokens 8K \
+    --max-num-seqs 16 \
+    --load-format fastsafetensors \
+    --kv-cache-dtype fp8 \
+env:
+  VLLM_USE_DEEP_GEMM: "0"
+  VLLM_USE_FLASHINFER_MOE_FP8: "1"
+  VLLM_MLA_DISABLE: "1"
+litellm:
+  temperature: 0.7
+  top_p: 0.8
+  top_k: 20
+  repetition_penalty: 1.05
+  max_tokens: 128K

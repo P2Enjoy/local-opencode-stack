@@ -1,0 +1,27 @@
+# Step-3.5 Flash High-Concurrency Small Window Configuration
+description: High-throughput inference with smaller context window
+command: |
+  vllm serve stepfun-ai/Step-3.5-Flash-FP8 \
+    --reasoning-parser step3p5 \
+    --enable-auto-tool-choice \
+    --tool-call-parser step3p5 \
+    --trust-remote-code \
+    --quantization fp8 \
+    --kv-cache-dtype fp8 \
+    --max-model-len 8K \
+    --max-num-seqs 64 \
+    --max-num-batched-tokens 16K \
+    --block-size 16 \
+    --enable-chunked-prefill \
+    --max-num-partial-prefills 4 \
+    --max-long-partial-prefills 2 \
+    --speculative_config '{"method":"step3p5_mtp","num_speculative_tokens":1}' \
+    --load-format fastsafetensors
+env:
+  VLLM_USE_FLASHINFER_MOE_FP8: 1
+  VLLM_ATTENTION_BACKEND: FLASH_ATTN
+  VLLM_FLASHINFER_MOE_BACKEND: latency
+  VLLM_USE_DEEP_GEMM: "0"
+  VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER: 1
+litellm:
+  max_tokens: 64K

@@ -77,8 +77,11 @@ def generate_config(
     env_vars = load_env_file(env_file)
     global_litellm_params = extract_litellm_params(env_vars)
 
-    # Get selected model
-    model_name = os.environ.get('MODEL', 'glm47-flash')
+    # Get selected model (required)
+    model_name = os.environ.get('MODEL')
+    if not model_name:
+        print("Error: MODEL environment variable is required", file=sys.stderr)
+        sys.exit(1)
 
     # Load models.yml and get model-specific overrides
     try:

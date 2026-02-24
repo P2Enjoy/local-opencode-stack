@@ -178,6 +178,8 @@ See [`../MODELS.md`](../MODELS.md) for detailed explanation of each technique.
 
 ```yaml
 # Human-readable comment
+description: Optional one-line summary shown by ./runMe.sh
+
 command: |
   # Actual vLLM command broken across lines for readability
 
