@@ -1,0 +1,49 @@
+# Qwen3.5 family
+# Usage: MODEL=qwen3.5 VARIANT=35b-nvfp4|122b-nvfp4
+#
+# 35b-nvfp4  — txn545/Qwen3.5-35B-A3B-NVFP4   (35B MoE, ~3B active params)
+# 122b-nvfp4 — txn545/Qwen3.5-122B-A10B-NVFP4 (122B MoE, ~10B active params)
+
+defaults:
+  description: Code generation and analysis (Qwen3.5 family)
+  env:
+    SAFETENSORS_FAST_GPU: "1"
+    VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
+    VLLM_USE_FLASHINFER_MOE_FP8: "1"
+    VLLM_FLASHINFER_MOE_BACKEND: "latency"
+    VLLM_USE_DEEP_GEMM: "0"
+    VLLM_USE_TRTLLM_ATTENTION: "0"
+  litellm:
+    temperature: 0.95
+    top_p: 0.95
+    top_k: 40
+    repetition_penalty: 1.1
+    max_tokens: 128K
+    timeout: 45
+
+variants:
+  35b-nvfp4:
+    command: |
+      vllm serve txn545/Qwen3.5-35B-A3B-NVFP4 \
+        --tokenizer-mode auto \
+        --enable-auto-tool-choice \
+        --tool-call-parser qwen3_xml \
+        --load-format fastsafetensors \
+        --attention-backend flashinfer \
+        --enable-prefix-caching \
+        --kv-cache-dtype fp8
+
+  122b-nvfp4:
+    description: Code generation and analysis (Qwen3.5-122B, NVFP4 quantized)
+    command: |
+      vllm serve txn545/Qwen3.5-122B-A10B-NVFP4 \
+        --tokenizer-mode auto \
+        --enable-auto-tool-choice \
+        --tool-call-parser qwen3_xml \
+        --load-format fastsafetensors \
+        --attention-backend flashinfer \
+        --enable-prefix-caching \
+        --kv-cache-dtype fp8
+    env:
+      # Larger model — allow more time for complex outputs
+      LITELLM_TIMEOUT: "60"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 # tune_moe.sh - Real vLLM MoE kernel tuner launcher
 #
-# Runs `python -m vllm.model_executor.layers.fused_moe.tune` inside the Docker
+# Runs `python3 -m vllm.model_executor.layers.fused_moe.tune` inside the Docker
 # container to produce BENCHMARK-VERIFIED kernel profiles for your specific GPU.
 # Profiles are saved to ./moe_configs/<model_config_name>/ and automatically
 # mounted into the vLLM container when that model is started.
@@ -243,7 +243,7 @@ echo ""
 
 # ─── Build the tune command ───────────────────────────────────────────────────
 
-TUNE_CMD="python -m vllm.model_executor.layers.fused_moe.tune \
+TUNE_CMD="python3 -m vllm.model_executor.layers.fused_moe.tune \
     --model ${MODEL_HF_ID} \
     --tp ${TP} \
     --dtype ${DTYPE} \
@@ -271,7 +271,7 @@ if [[ -n "$HF_TOKEN" ]]; then
     RUN_ARGS+=(-e "HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}")
 fi
 
-"${DOCKER_COMPOSE[@]}" "${RUN_ARGS[@]}" vllm-node -c "${TUNE_CMD}"
+"${DOCKER_COMPOSE[@]}" "${RUN_ARGS[@]}" vllm-node -c "cd /tmp/vllm_moe_tune/ && ${TUNE_CMD}"
 
 # ─── Done ─────────────────────────────────────────────────────────────────────
 

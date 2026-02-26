@@ -1,0 +1,114 @@
+# Qwen3-Coder-Next family
+# Usage: MODEL=qwen3-coder-next VARIANT=fp8|nvfp4|mxfp4
+#
+# fp8   — unsloth/Qwen3-Coder-Next-FP8-Dynamic  (full MoE FP8 acceleration)
+# nvfp4 — txn545/Qwen3-Coder-Next-NVFP4       (NVFP4 weight quantization)
+# mxfp4 — amd/Qwen3-Coder-Next-MXFP4        (AMD MXFP4 quantization)
+
+defaults:
+  description: Code generation and analysis (Qwen3-Coder-Next family)
+  env:
+    SAFETENSORS_FAST_GPU: "1"
+    VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
+    
+    # DeepGemm Blackwell
+    VLLM_USE_DEEP_GEMM: "1"
+    VLLM_USE_DEEP_GEMM_E8M0: "1"
+    VLLM_USE_DEEP_GEMM_TMA_ALIGNED_SCALES: "1"
+    VLLM_DEEP_GEMM_WARMUP: "relax"
+    
+    # FlashInfer MoE
+    VLLM_MOE_USE_DEEP_GEMM: "1"
+    VLLM_FLASHINFER_MOE_BACKEND: "latency"
+    
+    # MoE optimizations
+    VLLM_USE_FUSED_MOE_GROUPED_TOPK: "1"
+    VLLM_ENABLE_FUSED_MOE_ACTIVATION_CHUNKING: "1"
+    VLLM_ENABLE_MOE_DP_CHUNK: "1"
+    VLLM_FUSED_MOE_CHUNK_SIZE: "16384"
+    VLLM_MOE_DP_CHUNK_SIZE: "256"
+    
+    # FlashInfer workspace
+    VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE: "394264576"  # 394 * 1024 * 1024
+    VLLM_HAS_FLASHINFER_CUBIN: "0"
+    
+    # Compilation
+    VLLM_USE_AOT_COMPILE: "1"
+    VLLM_DISABLE_COMPILE_CACHE: "0"
+    VLLM_COMPILE_CACHE_SAVE_FORMAT: "binary"
+    VLLM_ENABLE_INDUCTOR_MAX_AUTOTUNE: "1"
+    VLLM_ENABLE_INDUCTOR_COORDINATE_DESCENT_TUNING: "1"
+    
+    # Communication
+    VLLM_USE_NCCL_SYMM_MEM: "1"
+    VLLM_ALLREDUCE_USE_SYMM_MEM: "1"
+    
+    # CUDA Graph
+    VLLM_ENABLE_CUDAGRAPH_GC: "0"
+    
+    # KV Cache scaling
+    Q_SCALE_CONSTANT: "200"
+    K_SCALE_CONSTANT: "200"
+    V_SCALE_CONSTANT: "100"
+    VLLM_KV_CACHE_LAYOUT: "NHD"
+  
+  litellm:
+    temperature: 0.95
+    top_p: 0.95
+    top_k: 40
+    repetition_penalty: 1.1
+    max_tokens: 256k
+    timeout: 45
+
+variants:
+  fp8:
+    command: |
+    vllm serve unsloth/Qwen3-Coder-Next-FP8-Dynamic \
+      --tokenizer-mode auto \
+      --enable-auto-tool-choice \
+      --tool-call-parser qwen3_xml \
+      --load-format fastsafetensors \
+      --attention-backend flashinfer \
+      --enable-prefix-caching \
+      --kv-cache-dtype fp8
+    env:
+      VLLM_USE_FLASHINFER_MOE_FP8: 1
+
+  nvfp4:
+    command: |
+    vllm serve txn545/Qwen3-Coder-Next-NVFP4 \
+      --tokenizer-mode auto \
+      --enable-auto-tool-choice \
+      --tool-call-parser qwen3_xml \
+      --load-format fastsafetensors \
+      --attention-backend flashinfer \
+      --enable-prefix-caching \
+      --kv-cache-dtype fp8
+    env:
+      # FlashInfer MoE
+      VLLM_USE_FLASHINFER_MOE_FP4: "1"      
+      # Backends Blackwell NVFP4
+      VLLM_DEEPEPLL_NVFP4_DISPATCH: "1"
+      VLLM_NVFP4_GEMM_BACKEND: "flashinfer-trtllm"
+      # MoE optimizations
+      VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "163840"
+
+
+  mxfp4:
+    command: |
+    vllm serve amd/Qwen3-Coder-Next-MXFP4 \
+      --tokenizer-mode auto \
+      --enable-auto-tool-choice \
+      --tool-call-parser qwen3_xml \
+      --load-format fastsafetensors \
+      --attention-backend flashinfer \
+      --enable-prefix-caching \
+      --kv-cache-dtype fp8
+    env:
+      # FlashInfer MoE
+      VLLM_USE_FLASHINFER_MOE_FP4: "1"      
+      # Backends Blackwell NVFP4
+      VLLM_DEEPEPLL_NVFP4_DISPATCH: "1"
+      VLLM_NVFP4_GEMM_BACKEND: "flashinfer-trtllm"
+      # MoE optimizations
+      VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "163840"
