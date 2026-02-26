@@ -9,43 +9,44 @@ defaults:
     VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
     
     # DeepGemm Blackwell (commun à tous)
-    VLLM_USE_DEEP_GEMM: "1"
-    VLLM_USE_DEEP_GEMM_E8M0: "1"
-    VLLM_USE_DEEP_GEMM_TMA_ALIGNED_SCALES: "1"
-    VLLM_DEEP_GEMM_WARMUP: "relax"
+    # VLLM_USE_DEEP_GEMM: "1"
+    # VLLM_USE_DEEP_GEMM_E8M0: "1"
+    # VLLM_USE_DEEP_GEMM_TMA_ALIGNED_SCALES: "1"
+    # VLLM_DEEP_GEMM_WARMUP: "relax"
     
     # MoE base optimizations (commun à tous)
-    VLLM_MOE_USE_DEEP_GEMM: "1"
-    VLLM_FLASHINFER_MOE_BACKEND: "latency"
-    VLLM_USE_FUSED_MOE_GROUPED_TOPK: "1"
-    VLLM_ENABLE_FUSED_MOE_ACTIVATION_CHUNKING: "1"
-    VLLM_ENABLE_MOE_DP_CHUNK: "1"
-    VLLM_FUSED_MOE_CHUNK_SIZE: "16384"
-    VLLM_MOE_DP_CHUNK_SIZE: "256"
+    # VLLM_MOE_USE_DEEP_GEMM: "1"
+    # VLLM_FLASHINFER_MOE_BACKEND: "latency"
+    # VLLM_USE_FUSED_MOE_GROUPED_TOPK: "1"
+    # VLLM_ENABLE_FUSED_MOE_ACTIVATION_CHUNKING: "1"
+    # VLLM_ENABLE_MOE_DP_CHUNK: "1"
+    # VLLM_FUSED_MOE_CHUNK_SIZE: "16384"
+    # VLLM_MOE_DP_CHUNK_SIZE: "256"
     
     # FlashInfer workspace
-    VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE: "394264576"
-    VLLM_HAS_FLASHINFER_CUBIN: "0"
+    # VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE: "394264576"
+    # VLLM_HAS_FLASHINFER_CUBIN: "0"
     
     # Compilation
-    VLLM_USE_AOT_COMPILE: "1"
-    VLLM_DISABLE_COMPILE_CACHE: "0"
-    VLLM_COMPILE_CACHE_SAVE_FORMAT: "binary"
-    VLLM_ENABLE_INDUCTOR_MAX_AUTOTUNE: "1"
-    VLLM_ENABLE_INDUCTOR_COORDINATE_DESCENT_TUNING: "1"
+    # VLLM_USE_AOT_COMPILE: "0"
+    # VLLM_DISABLE_COMPILE_CACHE: "0"
+    # VLLM_COMPILE_CACHE_SAVE_FORMAT: "binary"
+    # VLLM_ENABLE_INDUCTOR_MAX_AUTOTUNE: "1"
+    # VLLM_ENABLE_INDUCTOR_COORDINATE_DESCENT_TUNING: "1"
     
     # Communication
-    VLLM_USE_NCCL_SYMM_MEM: "1"
-    VLLM_ALLREDUCE_USE_SYMM_MEM: "1"
+    # VLLM_USE_NCCL_SYMM_MEM: "1"
+    # VLLM_ALLREDUCE_USE_SYMM_MEM: "1"
     
     # CUDA Graph
     VLLM_ENABLE_CUDAGRAPH_GC: "0"
+    VLLM_CUDAGRAPH_MODE: "0"
     
     # KV Cache scaling (commun à tous)
-    Q_SCALE_CONSTANT: "200"
-    K_SCALE_CONSTANT: "200"
-    V_SCALE_CONSTANT: "100"
-    VLLM_KV_CACHE_LAYOUT: "NHD"
+    # Q_SCALE_CONSTANT: "200"
+    # K_SCALE_CONSTANT: "200"
+    # V_SCALE_CONSTANT: "100"
+    # VLLM_KV_CACHE_LAYOUT: "NHD"
   
   litellm:
     temperature: 0.95
@@ -73,13 +74,10 @@ variants:
         --max-num-seqs 256
     env:
       # FP8 MoE kernels (FlashInfer optimisé)
-      VLLM_USE_FLASHINFER_MOE_FP8: "1"
+      # VLLM_USE_FLASHINFER_MOE_FP8: "1"
       
       # FP8 block-scale GEMM (Blackwell natif)
-      VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER: "1"
-      
-      # Pas de backends NVFP4 (pas nécessaire pour FP8)
-      # DeepGemm et autres optimisations Blackwell restent actives via defaults
+      # VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER: "1"
 
   # ===================================================================
   # NVFP4 - Quantification 4-bit float NVIDIA (meilleur compromis)
@@ -98,12 +96,12 @@ variants:
         --max-num-seqs 256
     env:
       # Backends Blackwell NVFP4 (natif)
-      VLLM_DEEPEPLL_NVFP4_DISPATCH: "1"
-      VLLM_NVFP4_GEMM_BACKEND: "flashinfer-trtllm"
+      # VLLM_DEEPEPLL_NVFP4_DISPATCH: "1"
+      VLLM_NVFP4_GEMM_BACKEND: "flashinfer-cutlass"
       
       # FlashInfer MoE FP4
-      VLLM_USE_FLASHINFER_MOE_FP4: "1"
-      VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "163840"
+      # VLLM_USE_FLASHINFER_MOE_FP4: "1"
+      # VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "163840"
 
   # ===================================================================
   # MXFP4 - Quantification 4-bit float AMD/Mixed (économie mémoire max)
@@ -129,45 +127,9 @@ variants:
       VLLM_USE_FLASHINFER_MOE_INT4: "1"
       
       # Alternative: Si MXFP4 compatible avec NVFP4 backend
-      # VLLM_NVFP4_GEMM_BACKEND: "flashinfer-cutlass"
-      # VLLM_USE_FLASHINFER_MOE_FP4: "1"
+      VLLM_NVFP4_GEMM_BACKEND: "flashinfer-cutlass"
+      VLLM_USE_FLASHINFER_MOE_FP4: "1"
       
       # Chunk size légèrement réduit pour MXFP4
       VLLM_FUSED_MOE_CHUNK_SIZE: "12288"
       VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "122880"
-
-
-# ===================================================================
-# PROFILS ALTERNATIFS (copier/coller selon besoin)
-# ===================================================================
-
-# PROFIL: Économie mémoire (70% GPU)
-# Ajouter à n'importe quelle variante:
-#   env:
-#     VLLM_DEEP_GEMM_WARMUP: "skip"
-#     VLLM_FUSED_MOE_CHUNK_SIZE: "8192"
-#     VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE: "268435456"  # 256MB
-#   command:
-#     --gpu-memory-utilization 0.75
-#     --max-num-seqs 128
-#     --max-model-len 8192
-
-# PROFIL: Multi-GPU (2x GPU)
-# Ajouter à n'importe quelle variante:
-#   env:
-#     VLLM_DEEPEP_BUFFER_SIZE_MB: "2048"
-#     VLLM_DEEPEP_HIGH_THROUGHPUT_FORCE_INTRA_NODE: "1"
-#   command:
-#     --tensor-parallel-size 2
-#     --max-model-len 32768
-#     --max-num-seqs 512
-
-# PROFIL: Qualité maximale (pour évaluation)
-# Ajouter à n'importe quelle variante:
-#   env:
-#     VLLM_DEEP_GEMM_WARMUP: "full"
-#     VLLM_ENABLE_FUSED_MOE_ACTIVATION_CHUNKING: "0"
-#   command:
-#     --enforce-eager
-#     --max-num-seqs 128
-#     --gpu-memory-utilization 0.85
