@@ -1,27 +1,22 @@
-# Qwen3-Coder-Next family
+# Qwen3-Coder-Next family - Configurations optimisées Blackwell GB10
 # Usage: MODEL=qwen3-coder-next VARIANT=fp8|nvfp4|mxfp4
-#
-# fp8   — unsloth/Qwen3-Coder-Next-FP8-Dynamic  (full MoE FP8 acceleration)
-# nvfp4 — txn545/Qwen3-Coder-Next-NVFP4       (NVFP4 weight quantization)
-# mxfp4 — amd/Qwen3-Coder-Next-MXFP4        (AMD MXFP4 quantization)
 
 defaults:
   description: Code generation and analysis (Qwen3-Coder-Next family)
   env:
+    # Base optimizations
     SAFETENSORS_FAST_GPU: "1"
     VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
     
-    # DeepGemm Blackwell
+    # DeepGemm Blackwell (commun à tous)
     VLLM_USE_DEEP_GEMM: "1"
     VLLM_USE_DEEP_GEMM_E8M0: "1"
     VLLM_USE_DEEP_GEMM_TMA_ALIGNED_SCALES: "1"
     VLLM_DEEP_GEMM_WARMUP: "relax"
     
-    # FlashInfer MoE
+    # MoE base optimizations (commun à tous)
     VLLM_MOE_USE_DEEP_GEMM: "1"
     VLLM_FLASHINFER_MOE_BACKEND: "latency"
-    
-    # MoE optimizations
     VLLM_USE_FUSED_MOE_GROUPED_TOPK: "1"
     VLLM_ENABLE_FUSED_MOE_ACTIVATION_CHUNKING: "1"
     VLLM_ENABLE_MOE_DP_CHUNK: "1"
@@ -29,7 +24,7 @@ defaults:
     VLLM_MOE_DP_CHUNK_SIZE: "256"
     
     # FlashInfer workspace
-    VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE: "394264576"  # 394 * 1024 * 1024
+    VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE: "394264576"
     VLLM_HAS_FLASHINFER_CUBIN: "0"
     
     # Compilation
@@ -46,7 +41,7 @@ defaults:
     # CUDA Graph
     VLLM_ENABLE_CUDAGRAPH_GC: "0"
     
-    # KV Cache scaling
+    # KV Cache scaling (commun à tous)
     Q_SCALE_CONSTANT: "200"
     K_SCALE_CONSTANT: "200"
     V_SCALE_CONSTANT: "100"
@@ -61,54 +56,118 @@ defaults:
     timeout: 45
 
 variants:
+  # ===================================================================
+  # FP8 - Full precision FP8 (le plus rapide, meilleure qualité)
+  # ===================================================================
   fp8:
     command: |
-    vllm serve unsloth/Qwen3-Coder-Next-FP8-Dynamic \
-      --tokenizer-mode auto \
-      --enable-auto-tool-choice \
-      --tool-call-parser qwen3_xml \
-      --load-format fastsafetensors \
-      --attention-backend flashinfer \
-      --enable-prefix-caching \
-      --kv-cache-dtype fp8
+      vllm serve unsloth/Qwen3-Coder-Next-FP8-Dynamic \
+        --tokenizer-mode auto \
+        --enable-auto-tool-choice \
+        --tool-call-parser qwen3_xml \
+        --load-format fastsafetensors \
+        --attention-backend flashinfer \
+        --enable-prefix-caching \
+        --enable-chunked-prefill \
+        --kv-cache-dtype fp8 \
+        --max-num-seqs 256
     env:
-      VLLM_USE_FLASHINFER_MOE_FP8: 1
+      # FP8 MoE kernels (FlashInfer optimisé)
+      VLLM_USE_FLASHINFER_MOE_FP8: "1"
+      
+      # FP8 block-scale GEMM (Blackwell natif)
+      VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER: "1"
+      
+      # Pas de backends NVFP4 (pas nécessaire pour FP8)
+      # DeepGemm et autres optimisations Blackwell restent actives via defaults
 
+  # ===================================================================
+  # NVFP4 - Quantification 4-bit float NVIDIA (meilleur compromis)
+  # ===================================================================
   nvfp4:
     command: |
-    vllm serve txn545/Qwen3-Coder-Next-NVFP4 \
-      --tokenizer-mode auto \
-      --enable-auto-tool-choice \
-      --tool-call-parser qwen3_xml \
-      --load-format fastsafetensors \
-      --attention-backend flashinfer \
-      --enable-prefix-caching \
-      --kv-cache-dtype fp8
+      vllm serve txn545/Qwen3-Coder-Next-NVFP4 \
+        --tokenizer-mode auto \
+        --enable-auto-tool-choice \
+        --tool-call-parser qwen3_xml \
+        --load-format fastsafetensors \
+        --attention-backend flashinfer \
+        --enable-prefix-caching \
+        --enable-chunked-prefill \
+        --kv-cache-dtype fp8 \
+        --max-num-seqs 256
     env:
-      # FlashInfer MoE
-      VLLM_USE_FLASHINFER_MOE_FP4: "1"      
-      # Backends Blackwell NVFP4
+      # Backends Blackwell NVFP4 (natif)
       VLLM_DEEPEPLL_NVFP4_DISPATCH: "1"
       VLLM_NVFP4_GEMM_BACKEND: "flashinfer-trtllm"
-      # MoE optimizations
+      
+      # FlashInfer MoE FP4
+      VLLM_USE_FLASHINFER_MOE_FP4: "1"
       VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "163840"
 
-
+  # ===================================================================
+  # MXFP4 - Quantification 4-bit float AMD/Mixed (économie mémoire max)
+  # ===================================================================
   mxfp4:
     command: |
-    vllm serve amd/Qwen3-Coder-Next-MXFP4 \
-      --tokenizer-mode auto \
-      --enable-auto-tool-choice \
-      --tool-call-parser qwen3_xml \
-      --load-format fastsafetensors \
-      --attention-backend flashinfer \
-      --enable-prefix-caching \
-      --kv-cache-dtype fp8
+      vllm serve amd/Qwen3-Coder-Next-MXFP4 \
+        --tokenizer-mode auto \
+        --enable-auto-tool-choice \
+        --tool-call-parser qwen3_xml \
+        --load-format fastsafetensors \
+        --attention-backend flashinfer \
+        --enable-prefix-caching \
+        --enable-chunked-prefill \
+        --kv-cache-dtype fp8 \
+        --max-num-seqs 256
     env:
-      # FlashInfer MoE
-      VLLM_USE_FLASHINFER_MOE_FP4: "1"      
-      # Backends Blackwell NVFP4
-      VLLM_DEEPEPLL_NVFP4_DISPATCH: "1"
-      VLLM_NVFP4_GEMM_BACKEND: "flashinfer-trtllm"
-      # MoE optimizations
-      VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "163840"
+      # MXFP4 peut utiliser Marlin kernel sur Blackwell
+      VLLM_MXFP4_USE_MARLIN: "1"
+      
+      # FlashInfer MoE avec support MXFP4
+      VLLM_USE_FLASHINFER_MOE_MXFP4_BF16: "1"
+      VLLM_USE_FLASHINFER_MOE_INT4: "1"
+      
+      # Alternative: Si MXFP4 compatible avec NVFP4 backend
+      # VLLM_NVFP4_GEMM_BACKEND: "flashinfer-cutlass"
+      # VLLM_USE_FLASHINFER_MOE_FP4: "1"
+      
+      # Chunk size légèrement réduit pour MXFP4
+      VLLM_FUSED_MOE_CHUNK_SIZE: "12288"
+      VLLM_MAX_TOKENS_PER_EXPERT_FP4_MOE: "122880"
+
+
+# ===================================================================
+# PROFILS ALTERNATIFS (copier/coller selon besoin)
+# ===================================================================
+
+# PROFIL: Économie mémoire (70% GPU)
+# Ajouter à n'importe quelle variante:
+#   env:
+#     VLLM_DEEP_GEMM_WARMUP: "skip"
+#     VLLM_FUSED_MOE_CHUNK_SIZE: "8192"
+#     VLLM_FLASHINFER_WORKSPACE_BUFFER_SIZE: "268435456"  # 256MB
+#   command:
+#     --gpu-memory-utilization 0.75
+#     --max-num-seqs 128
+#     --max-model-len 8192
+
+# PROFIL: Multi-GPU (2x GPU)
+# Ajouter à n'importe quelle variante:
+#   env:
+#     VLLM_DEEPEP_BUFFER_SIZE_MB: "2048"
+#     VLLM_DEEPEP_HIGH_THROUGHPUT_FORCE_INTRA_NODE: "1"
+#   command:
+#     --tensor-parallel-size 2
+#     --max-model-len 32768
+#     --max-num-seqs 512
+
+# PROFIL: Qualité maximale (pour évaluation)
+# Ajouter à n'importe quelle variante:
+#   env:
+#     VLLM_DEEP_GEMM_WARMUP: "full"
+#     VLLM_ENABLE_FUSED_MOE_ACTIVATION_CHUNKING: "0"
+#   command:
+#     --enforce-eager
+#     --max-num-seqs 128
+#     --gpu-memory-utilization 0.85
