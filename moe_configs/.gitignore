@@ -1,0 +1,5 @@
+# Ignore generated MoE profiles (GPU-specific)
+*.json
+
+# Keep the README
+!README.md

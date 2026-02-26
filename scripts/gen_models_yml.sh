@@ -10,6 +10,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="${MODELS_DIR:-${SCRIPT_DIR}/../models}"
 OUTPUT_FILE="${MODELS_YML_PATH:-/app/generated_configs/models.yml}"
 MODEL_NAME="${MODEL_NAME:-${MODEL:-}}"
+VARIANT_NAME="${VARIANT_NAME:-${VARIANT:-}}"
 
 info() { echo "[INFO] $1"; }
 err()  { echo "[ERROR] $1" >&2; }
@@ -19,12 +20,14 @@ usage() {
 Generate models.yml from per-model fragments.
 
 Env Vars:
-  MODELS_DIR       Directory containing model fragments (*.yml)
-  MODELS_YML_PATH  Output file path (default: /app/generated_configs/models.yml)
-  MODEL / MODEL_NAME  Optional selected model key (e.g. glm47-flash)
+  MODELS_DIR            Directory containing model fragments (*.yml)
+  MODELS_YML_PATH       Output file path (default: /app/generated_configs/models.yml)
+  MODEL / MODEL_NAME    Optional selected model key (e.g. glm47-flash)
+  VARIANT / VARIANT_NAME  Optional variant for family model files (e.g. nvfp4)
 
 Options:
   --model NAME     Same as MODEL_NAME env var
+  --variant NAME   Same as VARIANT_NAME env var
   --dry-run        Show selected inputs and output path without writing
   --help, -h       Show this help
 USAGE
@@ -41,6 +44,7 @@ collect_model_names() {
     local discovered
     discovered="$(find "$MODELS_DIR" -maxdepth 1 -type f -name "*.yml" -printf "%f\n" \
         | sed -E 's/\.yml$//' \
+        | grep -v '\-base$' \
         | sort)"
 
     if [[ -n "$MODEL_NAME" ]]; then
@@ -65,8 +69,18 @@ append_model_block() {
 
     printf "%s:\n" "$model" >> "$OUTPUT_FILE"
 
-    # Strip document markers and indent content to nest under "<model>:"
-    sed '/^---$/d' "$source_file" | sed 's/^/  /' >> "$OUTPUT_FILE"
+    if grep -q '^variants:' "$source_file" 2>/dev/null; then
+        # Family file: Python resolver handles defaults + variant merge
+        python3 "${SCRIPT_DIR}/resolve_variant.py" \
+            --models-dir "$MODELS_DIR" \
+            --model "$model" \
+            ${VARIANT_NAME:+--variant "$VARIANT_NAME"} \
+            | sed 's/^/  /' >> "$OUTPUT_FILE"
+    else
+        # Legacy flat file: strip document markers and indent
+        sed '/^---$/d' "$source_file" | sed 's/^/  /' >> "$OUTPUT_FILE"
+    fi
+
     printf "\n" >> "$OUTPUT_FILE"
 }
 
@@ -111,6 +125,11 @@ while [[ $# -gt 0 ]]; do
             [[ $# -gt 0 ]] || { err "Missing value for --model"; usage; exit 1; }
             MODEL_NAME="$1"
             ;;
+        --variant)
+            shift
+            [[ $# -gt 0 ]] || { err "Missing value for --variant"; usage; exit 1; }
+            VARIANT_NAME="$1"
+            ;;
         --dry-run)
             DRY_RUN=1
             ;;
@@ -133,6 +152,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     info "[DRY RUN] MODELS_DIR=$MODELS_DIR"
     info "[DRY RUN] OUTPUT_FILE=$OUTPUT_FILE"
     info "[DRY RUN] MODEL_NAME=${MODEL_NAME:-<all>}"
+    info "[DRY RUN] VARIANT_NAME=${VARIANT_NAME:-<none>}"
     while IFS= read -r model; do
         [[ -n "$model" ]] && echo "  - ${MODELS_DIR}/${model}.yml"
     done < <(collect_model_names)

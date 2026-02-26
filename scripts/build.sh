@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script lives in scripts/ — change to project root so docker compose
+# finds docker-compose.yml without needing an explicit -f flag everywhere.
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

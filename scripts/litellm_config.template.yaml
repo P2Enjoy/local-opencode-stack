@@ -1,0 +1,75 @@
+# LiteLLM Configuration Template
+# This is filled at runtime with values from vars.env defaults + models.yml overrides
+# Fixed parameters: model_name, model, api_base, api_key
+# Dynamic parameters: max_tokens, temperature, top_p, top_k, repetition_penalty, timeout
+
+model_list:
+  - model_name: "*"
+    litellm_params:
+      allowed_openai_params: ["reasoning_effort"]
+      model: "hosted_vllm/vllm_agent"
+      api_base: "http://vllm-node:8000/v1"
+      api_key: "sk-FAKE"
+      max_tokens: {{ max_tokens }}
+      repetition_penalty: {{ repetition_penalty }}
+      temperature: {{ temperature }}
+      top_k: {{ top_k }}
+      top_p: {{ top_p }}
+      # Timeout in seconds - overrides router_settings.timeout for this model
+      # Set to 0 or null to use router_settings.timeout (default: 30)
+{% if timeout is defined %}
+      timeout: {{ timeout }}
+{% endif %}
+
+litellm_settings:
+  # Drop provider-specific fields your backend will not understand
+  # (helps a lot with Anthropic-shaped traffic hitting OpenAI-compatible backends).
+  drop_params: true
+  # Keep timeouts finite so hung requests do not pin worker slots forever.
+  # Default 30 seconds - much shorter than the old 300s to prevent cascading failures.
+  request_timeout: 30
+  # Logging full prompts/responses is expensive at scale.
+  turn_off_message_logging: true
+
+router_settings:
+  # LiteLLM recommends simple-shuffle for best performance (minimal routing overhead).
+  routing_strategy: simple-shuffle
+  # Your backend is local, retries often just amplify load during saturation.
+  num_retries: 0
+  # Default timeout for all models (30s - short to prevent cascading failures).
+  # Individual models can override this with their own timeout value.
+  timeout: 30
+  stream_timeout: 240
+
+general_settings:
+  # Backpressure knobs - crucial for preventing hanging requests from blocking others!
+  #
+  # HOW IT WORKS: LiteLLM uses a semaphore to limit concurrent requests. When the limit
+  # is reached, new requests wait in a queue. If requests hang, they hold their slot
+  # indefinitely, causing a cascade where ALL subsequent requests wait.
+  #
+  # SOLUTION: Set max_parallel_requests LOW (5 is recommended). Combined with a short
+  # timeout (30s default), this ensures:
+  #   1. At most 5 requests process concurrently
+  #   2. Hung requests timeout after 30s (or model-specific value)
+  #   3. Timed-out requests release their slot immediately
+  #   4. New requests can proceed instead of piling up behind hung ones
+  #
+  # Tuning guide:
+  #   - If using vLLM --max-num-seqs 16: set to 5-8
+  #   - If using vLLM --max-num-seqs 8: set to 3-4
+  #   - Monitor: if you see slow response times, reduce further
+  {% if max_parallel_requests is defined %}
+  max_parallel_requests: {{ max_parallel_requests }}
+  global_max_parallel_requests: {{ max_parallel_requests }}
+  {% else %}
+  max_parallel_requests: 5
+  global_max_parallel_requests: 5
+  {% endif %}
+  # Optional: reduce overhead further if you do not need spend logs, UI analytics, etc.
+  disable_spend_logs: true
+
+environment_variables:
+  # Avoid accidental connector bottlenecks (0 means no limit).
+  AIOHTTP_CONNECTOR_LIMIT: 0
+  AIOHTTP_CONNECTOR_LIMIT_PER_HOST: 0

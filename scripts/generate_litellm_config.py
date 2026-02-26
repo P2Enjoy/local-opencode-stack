@@ -11,6 +11,7 @@ import os
 import sys
 import argparse
 from pathlib import Path
+from jinja2 import Environment, StrictUndefined, UndefinedError
 
 
 def load_env_file(env_file):
@@ -47,6 +48,8 @@ def extract_litellm_params(env_vars):
         'LITELLM_TOP_K': 'top_k',
         'LITELLM_REPETITION_PENALTY': 'repetition_penalty',
         'LITELLM_MAX_TOKENS': 'max_tokens',
+        'LITELLM_TIMEOUT': 'timeout',
+        'LITELLM_MAX_PARALLEL_REQUESTS': 'max_parallel_requests',
     }
 
     for env_key, param_key in litellm_vars.items():
@@ -54,9 +57,9 @@ def extract_litellm_params(env_vars):
             value = env_vars[env_key]
             # Convert to appropriate type
             try:
-                if param_key in ['temperature', 'top_p', 'repetition_penalty']:
+                if param_key in ['temperature', 'top_p', 'repetition_penalty', 'timeout']:
                     litellm_params[param_key] = float(value)
-                else:  # top_k, max_tokens
+                else:  # top_k, max_tokens, max_parallel_requests
                     litellm_params[param_key] = int(value)
             except ValueError:
                 print(f"Warning: Could not convert {env_key}={value} to appropriate type", file=sys.stderr)
@@ -114,11 +117,18 @@ def generate_config(
         print(f"Error: {template_file} not found", file=sys.stderr)
         sys.exit(1)
 
-    # Render template using simple string replacement
-    rendered_config = template_content
-    for key, value in final_litellm_params.items():
-        placeholder = f"{{{{ {key} }}}}"
-        rendered_config = rendered_config.replace(placeholder, str(value))
+    # Render template using Jinja2 (handles both {{ var }} and {% if %} blocks)
+    jinja_env = Environment(
+        trim_blocks=True,    # drop the newline after a block tag
+        lstrip_blocks=True,  # strip leading whitespace before block tags
+        undefined=StrictUndefined,
+    )
+    try:
+        rendered_config = jinja_env.from_string(template_content).render(**final_litellm_params)
+    except UndefinedError as e:
+        print(f"Error: template variable not set: {e}", file=sys.stderr)
+        print(f"  Defined params: {list(final_litellm_params.keys())}", file=sys.stderr)
+        sys.exit(1)
 
     # Write config.yaml
     try:

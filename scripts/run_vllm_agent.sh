@@ -31,15 +31,17 @@ if [ -f "$SECRETS_HELPER" ]; then
 fi
 
 MODEL="${MODEL:-}"
+VARIANT="${VARIANT:-}"
 GENERATED_MODELS_FILE="/app/generated_configs/models.yml"
 
 if [ -z "$MODEL" ]; then
     echo "Error: MODEL environment variable is required." >&2
     echo "Set MODEL to a model key from /app/models (filename without .yml)." >&2
     if [ -d /app/models ]; then
-        AVAILABLE_MODELS="$(find /app/models -maxdepth 1 -type f -name '*.yml' -printf '%f\n' | sed -E 's/\.yml$//' | sort | tr '\n' ' ')"
+        AVAILABLE_MODELS="$(find /app/models -maxdepth 1 -type f -name '*.yml' -printf '%f\n' | sed -E 's/\.yml$//' | grep -v '\-base$' | sort | tr '\n' ' ')"
         if [ -n "$AVAILABLE_MODELS" ]; then
             echo "Available models: $AVAILABLE_MODELS" >&2
+            echo "Note: family models (qwen3-coder-next, qwen3.5, step-3.5) also require VARIANT to be set." >&2
         fi
     fi
     exit 1
@@ -126,7 +128,8 @@ fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "VLLM Agent Configuration"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Model: $MODEL"
+echo "Model:   $MODEL"
+echo "Variant: ${VARIANT:-<none>}"
 echo "Configuration File: /app/generated_configs/models.yml"
 echo "Global Variables Exported: $(env | grep -E '^(HF_TOKEN|ANTHROPIC)' | cut -d= -f1 | tr '\n' ' ' || true)"
 echo "Model-Specific Variables: ${MODEL_ENV_KEYS:-<none>}"
